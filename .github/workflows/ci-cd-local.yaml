@@ -1,0 +1,26 @@
+name: CI/CD Local Kind
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-test-deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t mi-app:latest .
+
+      - name: Run tests
+        run: docker run --rm mi-app:latest pytest
+
+      - name: Load image into kind
+        run: kind load docker-image mi-app:latest --name mi-cluster     
+      - name: Deploy to Kubernetes
+        run: kubectl apply -f k8s/deployment.yaml
+      - name: Check deployment
+        run: kubectl get pods && kubectl get svc
