@@ -2,7 +2,7 @@ name: CI/CD Local Kind
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build-test-deploy:
@@ -18,9 +18,26 @@ jobs:
       - name: Run tests
         run: docker run --rm mi-app:latest pytest
 
+      # 1) Asegura que el cluster kind existe
+      - name: Ensure kind cluster exists
+        run: |
+          kind get clusters | grep -q "^mi-cluster$" || kind create cluster --name mi-cluster
+
+      # 2) Asegura que kubectl está apuntando a ese cluster (evita localhost:8080)
+      - name: Configure kubeconfig for kind
+        run: |
+          kind export kubeconfig --name mi-cluster
+          kubectl cluster-info
+          kubectl get nodes
+
+      # 3) Carga la imagen en kind (ahora sí, el cluster existe)
       - name: Load image into kind
-        run: kind load docker-image mi-app:latest --name mi-cluster     
+        run: kind load docker-image mi-app:latest --name mi-cluster
+
       - name: Deploy to Kubernetes
         run: kubectl apply -f k8s/deployment.yaml
+
       - name: Check deployment
-        run: kubectl get pods && kubectl get svc
+        run: |
+          kubectl get pods
+          kubectl get svc
